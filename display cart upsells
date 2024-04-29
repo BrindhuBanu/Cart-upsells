@@ -1,0 +1,96 @@
+// Get cart products with their IDs
+function get_cart_product_ids() {
+    $cart = WC()->cart->get_cart();
+    $product_ids = array();
+
+    foreach ($cart as $cart_item_key => $cart_item) {
+        $product_ids[] = $cart_item['product_id'];
+    }
+
+    return $product_ids;
+}
+
+
+//Check if the products have upsells
+function has_upsells($product_id) {
+    $product = wc_get_product($product_id);
+    return $product && $product->get_upsell_ids();
+}
+
+
+//If upsells exist, display them using a shortcode
+function display_upsells_shortcode($atts) {
+    $atts = shortcode_atts(array(
+        'number' => 4 
+    ), $atts, 'display_upsells');
+
+    $cart_product_ids = get_cart_product_ids();
+    $upsell_product_ids = array();
+
+    foreach ($cart_product_ids as $product_id) {
+        if (has_upsells($product_id)) {
+            $upsell_product_ids = array_merge($upsell_product_ids, wc_get_product($product_id)->get_upsell_ids());
+        }
+    }
+
+    // Randomly shuffle the array
+    shuffle($upsell_product_ids);
+
+    
+   ?> <div id="upsells_load">
+<?php
+    $output = '<div id="avs_upsells">';
+    for ($i = 0; $i < $atts['number'] && $i < count($upsell_product_ids); $i++) {
+        $product = wc_get_product($upsell_product_ids[$i]);
+        if ($product) {
+            $output .= '<div class="avs_upsellprd">';
+            $output .= '<a class="avs_upsells_img" href="' . esc_url($product->get_permalink()) . '">';
+            $output .= $product->get_image(); // Get product image
+            $output .= '</a>';
+            $output .= '<div class="product-details">';
+            $output .= '<a href="' . esc_url($product->get_permalink()) . '">';
+            $output .= '<h2 class="product_title">' . $product->get_name() . '</h2>'; // Product name
+            $output .= '</a>';
+            $output .= '<p><span class="price">' . $product->get_price_html() . '</span></p>'; // Product price
+            if ($product->is_type('simple')) {
+                
+                $output .= '<button><a href="' . esc_url($product->add_to_cart_url()) . '" class="button add_to_cart_button">' . __('Add to cart', 'woocommerce') . '</a></button>';
+            } elseif ($product->is_type('variable')) {
+                
+                $output .= '<button><a href="' . esc_url($product->get_permalink()) . '" class="button">' . __('Read more', 'woocommerce') . '</a></button>';
+            }
+            $output .= '</div>';
+            $output .= '</div>'; 
+        }
+    }
+    $output .= '</div>';
+?>
+</div>
+<?php
+    return $output;
+}
+
+add_shortcode('display_upsells', 'display_upsells_shortcode');
+
+
+add_action('wp_footer', 'check_cart_product_removed');
+
+function check_cart_product_removed() {
+
+    if (is_cart()) { ?>
+        <script>
+            jQuery(document).ready(function($) {
+                var initialCartCount = $('.woocommerce-cart-form__cart-item').length;
+                
+                $(document.body).on('updated_cart_totals', function() {
+                  
+                    var cartItemCount = $('.woocommerce-cart-form__cart-item').length;
+
+                    if (cartItemCount < initialCartCount) {
+                        location.reload();
+                    }
+                });
+            });
+        </script>
+    <?php }
+} 
