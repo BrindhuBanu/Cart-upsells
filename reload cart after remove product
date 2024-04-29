@@ -1,0 +1,13 @@
+<!-- Script to handle product removal and page reload -->
+<script>
+jQuery(document).ready(function($) {
+    $(document).on('click', '.woocommerce-cart .product-remove .remove', function(e) {
+		//location.reload(true);
+		 setTimeout(function() {
+		window.location.href = 'http://woocommerce.local/cart/';
+			 }, 1000);
+	});
+        
+    });
+
+</script>
